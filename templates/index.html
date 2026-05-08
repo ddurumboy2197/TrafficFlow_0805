@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TrafficFlow — Haydovchilar Tizimi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0b0f;
+      --surface: #111318;
+      --surface2: #181c24;
+      --border: #1f2433;
+      --accent: #e8ff47;
+      --accent2: #ff6b35;
+      --accent3: #4af0c4;
+      --text: #e8eaf2;
+      --muted: #5a6080;
+      --danger: #ff4757;
+      --success: #2ed573;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 0%, rgba(232,255,71,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(74,240,196,0.03) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* === HEADER === */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,11,15,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.3rem;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.85); }
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* === LAYOUT === */
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: calc(100vh - 64px);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* === SIDEBAR === */
+    nav {
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.2rem;
+      position: sticky;
+      top: 64px;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+    }
+
+    .nav-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+      padding-left: 0.6rem;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      margin-bottom: 4px;
+    }
+
+    .nav-btn:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .nav-btn.active {
+      background: rgba(232,255,71,0.08);
+      color: var(--accent);
+      border: 1px solid rgba(232,255,71,0.15);
+    }
+
+    .nav-icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .nav-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.2rem 0;
+    }
+
+    /* === MAIN CONTENT === */
+    main {
+      padding: 2.5rem 2.5rem 4rem;
+      max-width: 1100px;
+    }
+
+    .page { display: none; animation: fadeIn 0.3s ease; }
+    .page.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === PAGE HEADER === */
+    .page-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .page-title span {
+      color: var(--accent);
+    }
+
+    .page-subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    /* === STATS CARDS === */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.4rem 1.6rem;
+      transition: border-color 0.2s;
+    }
+
+    .stat-card:hover { border-color: var(--accent); }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* === TOOLBAR === */
+    .toolbar {
+      display: flex;
+      gap: 0.8rem;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .search-box::placeholder { color: var(--muted); }
+    .search-box:focus { border-color: rgba(232,255,71,0.4); }
+
+    /* === BUTTONS === */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0b0f;
+    }
+
+    .btn-primary:hover {
+      background: #f5ff70;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(232,255,71,0.2);
+    }
+
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--muted);
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background: rgba(255,71,87,0.1);
+      color: var(--danger);
+      border: 1px solid rgba(255,71,87,0.2);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255,71,87,0.2);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+      border-radius: 7px;
+    }
+
+    /* === TABLE === */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 14px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    td {
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(31,36,51,0.6);
+      font-size: 14px;
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr:hover td { background: rgba(232,255,71,0.02); }
+
+    .td-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    /* === BADGE === */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-green {
+      background: rgba(46,213,115,0.1);
+      color: var(--success);
+      border: 1px solid rgba(46,213,115,0.2);
+    }
+
+    .badge-orange {
+      background: rgba(255,107,53,0.1);
+      color: var(--accent2);
+      border: 1px solid rgba(255,107,53,0.2);
+    }
+
+    .badge-blue {
+      background: rgba(74,240,196,0.08);
+      color: var(--accent3);
+      border: 1px solid rgba(74,240,196,0.15);
+    }
+
+    /* === MODAL === */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .overlay.open { display: flex; animation: fadeIn 0.25s ease; }
+
+    .modal {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 1.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+
+    .modal-close:hover { color: var(--text); }
+
+    .modal-body { padding: 1.8rem; }
+
+    .modal-footer {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: flex-end;
+      padding: 1rem 1.8rem 1.5rem;
+    }
+
+    /* === FORM === */
+    .form-group { margin-bottom: 1.2rem; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      border-color: rgba(232,255,71,0.5);
+      box-shadow: 0 0 0 3px rgba(232,255,71,0.06);
+    }
+
+    select.form-control option { background: var(--surface2); }
+
+    /* === EXPAND ROW (nested cars/fines) === */
+    .expand-row td {
+      padding: 0;
+      background: var(--surface2);
+    }
+
+    .nested-table {
+      margin: 0;
+      border-radius: 0;
+    }
+
+    .nested-table th {
+      background: rgba(232,255,71,0.04);
+      font-size: 10px;
+      padding: 10px 24px;
+    }
+
+    .nested-table td {
+      padding: 10px 24px;
+      font-size: 13px;
+    }
+
+    .nested-section { padding: 12px 0; }
+
+    /* === EMPTY STATE === */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+
+    .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+    .empty-text { font-size: 15px; }
+
+    /* === TOAST === */
+    #toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease;
+      min-width: 240px;
+    }
+
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error   { border-left: 3px solid var(--danger); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(30px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* === SCROLLBAR === */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* === LOADING === */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      gap: 10px;
+      color: var(--muted);
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* === DASHBOARD GRID === */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin-top: 1.5rem;
+    }
+
+    .dash-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+
+    .dash-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+    }
+
+    .driver-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(31,36,51,0.5);
+    }
+
+    .driver-row:last-child { border-bottom: none; }
+
+    .driver-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(232,255,71,0.2), rgba(74,240,196,0.2));
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    TrafficFlow
+  </div>
+  <div class="header-status">
+    <div class="status-dot"></div>
+    <span id="api-status">API ulandi</span>
+    <span style="color: var(--border)">|</span>
+    <span id="current-time"></span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <nav>
+    <div class="nav-label">Asosiy</div>
+    <button class="nav-btn active" onclick="showPage('dashboard')">
+      <span class="nav-icon">⬡</span> Dashboard
+    </button>
+    <button class="nav-btn" onclick="showPage('drivers')">
+      <span class="nav-icon">👤</span> Haydovchilar
+    </button>
+    <button class="nav-btn" onclick="showPage('cars')">
+      <span class="nav-icon">🚗</span> Mashinalar
+    </button>
+    <button class="nav-btn" onclick="showPage('fines')">
+      <span class="nav-icon">📋</span> Jarimalar
+    </button>
+    <div class="nav-divider"></div>
+    <div class="nav-label">API</div>
+    <button class="nav-btn" onclick="window.open('/api/', '_blank')">
+      <span class="nav-icon">🔗</span> DRF Browsable
+    </button>
+    <button class="nav-btn" onclick="window.open('/admin/', '_blank')">
+      <span class="nav-icon">⚙️</span> Admin Panel
+    </button>
+  </nav>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard <span>↗</span></div>
+          <div class="page-subtitle">Tizim ko'rinishi va statistika</div>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Haydovchilar</div>
+          <div class="stat-value" id="stat-drivers">—</div>
+          <div class="stat-sub">Jami ro'yxatda</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Mashinalar</div>
+          <div class="stat-value" id="stat-cars">—</div>
+          <div class="stat-sub">Ro'yxatdagi transport</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Jarimalar</div>
+          <div class="stat-value" id="stat-fines">—</div>
+          <div class="stat-sub">Umumiy miqdor</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="dash-card">
+          <h3>So'nggi haydovchilar</h3>
+          <div id="dash-drivers-list"><div class="loading"><div class="spinner"></div> Yuklanmoqda...</div></div>
+        </div>
+        <div class="dash-card">
+          <h3>So'nggi jarimalar</h3>
+          <div id="dash-fines-list"><div class="loading"><div class="spinner"></div> Yuklanmoqda...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DRIVERS -->
+    <div class="page" id="page-drivers">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Haydovchilar</div>
+          <div class="page-subtitle">Barcha haydovchilarni boshqarish</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('driver')">
+          ＋ Yangi haydovchi
+        </button>
+      </div>
+
+      <div class="toolbar">
+        <input class="search-box" type="text" placeholder="🔍  Ism yoki familiya..." id="drivers-search" oninput="filterDrivers()"/>
+      </div>
+
+      <div class="table-wrap">
+        <div id="drivers-table-body"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- CARS -->
+    <div class="page" id="page-cars">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Mashinalar</div>
+          <div class="page-subtitle">Transport vositalari ro'yxati</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('car')">
+          ＋ Yangi mashina
+        </button>
+      </div>
+
+      <div class="toolbar">
+        <input class="search-box" type="text" placeholder="🔍  Brand yoki davlat raqami..." id="cars-search" oninput="filterCars()"/>
+      </div>
+
+      <div class="table-wrap">
+        <div id="cars-table-body"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- FINES -->
+    <div class="page" id="page-fines">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Jarimalar</div>
+          <div class="page-subtitle">Barcha jarimalar ro'yxati</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('fine')">
+          ＋ Yangi jarima
+        </button>
+      </div>
+
+      <div class="toolbar">
+        <input class="search-box" type="text" placeholder="🔍  Miqdor yoki sana..." id="fines-search" oninput="filterFines()"/>
+      </div>
+
+      <div class="table-wrap">
+        <div id="fines-table-body"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL: Driver -->
+<div class="overlay" id="modal-driver">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="driver-modal-title">Yangi haydovchi</div>
+      <button class="modal-close" onclick="closeModal('driver')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="driver-id"/>
+      <div class="form-group">
+        <label>Ism</label>
+        <input class="form-control" id="driver-first" type="text" placeholder="Ism kiriting"/>
+      </div>
+      <div class="form-group">
+        <label>Familiya</label>
+        <input class="form-control" id="driver-last" type="text" placeholder="Familiya kiriting"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('driver')">Bekor</button>
+      <button class="btn btn-primary" onclick="saveDriver()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Car -->
+<div class="overlay" id="modal-car">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="car-modal-title">Yangi mashina</div>
+      <button class="modal-close" onclick="closeModal('car')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="car-id"/>
+      <div class="form-group">
+        <label>Brend</label>
+        <input class="form-control" id="car-brand" type="text" placeholder="Masalan: Chevrolet Cobalt"/>
+      </div>
+      <div class="form-group">
+        <label>Davlat raqami</label>
+        <input class="form-control" id="car-plate" type="text" placeholder="01 A 123 BC"/>
+      </div>
+      <div class="form-group">
+        <label>Haydovchi</label>
+        <select class="form-control" id="car-driver">
+          <option value="">Haydovchi tanlang...</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('car')">Bekor</button>
+      <button class="btn btn-primary" onclick="saveCar()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Fine -->
+<div class="overlay" id="modal-fine">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="fine-modal-title">Yangi jarima</div>
+      <button class="modal-close" onclick="closeModal('fine')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="fine-id"/>
+      <div class="form-group">
+        <label>Mashina</label>
+        <select class="form-control" id="fine-car">
+          <option value="">Mashina tanlang...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Miqdor (so'm)</label>
+        <input class="form-control" id="fine-amount" type="number" min="0" step="0.01" placeholder="0.00"/>
+      </div>
+      <div class="form-group">
+        <label>Sana</label>
+        <input class="form-control" id="fine-date" type="date"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('fine')">Bekor</button>
+      <button class="btn btn-primary" onclick="saveFine()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<script>
+  const API = '/api';
+  let allDrivers = [], allCars = [], allFines = [];
+
+  // === TIME ===
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('current-time').textContent =
+      now.toLocaleTimeString('uz-UZ', {hour: '2-digit', minute: '2-digit'});
+  }
+  setInterval(updateTime, 1000);
+  updateTime();
+
+  // === NAVIGATION ===
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`page-${name}`).classList.add('active');
+    event.currentTarget.classList.add('active');
+    if (name === 'dashboard') loadDashboard();
+    if (name === 'drivers') loadDriversTable();
+    if (name === 'cars') loadCarsTable();
+    if (name === 'fines') loadFinesTable();
+  }
+
+  // === API HELPERS ===
+  function getCookie(name) {
+    const val = `; ${document.cookie}`;
+    const parts = val.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  }
+
+  async function apiFetch(path, opts = {}) {
+    const method = opts.method || 'GET';
+    const csrfToken = getCookie('csrftoken');
+    const headers = {'Content-Type': 'application/json', ...opts.headers};
+    if (['POST','PUT','PATCH','DELETE'].includes(method) && csrfToken) {
+      headers['X-CSRFToken'] = csrfToken;
+    }
+    const res = await fetch(API + path, { headers, ...opts });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  // === TOAST ===
+  function toast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span> ${msg}`;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+
+  // === MODAL ===
+  function openModal(type, loadSelect = true) {
+    document.getElementById(`modal-${type}`).classList.add('open');
+    if (loadSelect && type === 'car') loadDriversForSelect();
+    if (loadSelect && type === 'fine') loadCarsForSelect();
+  }
+
+  function closeModal(type) {
+    document.getElementById(`modal-${type}`).classList.remove('open');
+    // reset
+    if (type === 'driver') {
+      document.getElementById('driver-id').value = '';
+      document.getElementById('driver-first').value = '';
+      document.getElementById('driver-last').value = '';
+      document.getElementById('driver-modal-title').textContent = 'Yangi haydovchi';
+    }
+    if (type === 'car') {
+      document.getElementById('car-id').value = '';
+      document.getElementById('car-brand').value = '';
+      document.getElementById('car-plate').value = '';
+      document.getElementById('car-modal-title').textContent = 'Yangi mashina';
+    }
+    if (type === 'fine') {
+      document.getElementById('fine-id').value = '';
+      document.getElementById('fine-amount').value = '';
+      document.getElementById('fine-date').value = '';
+      document.getElementById('fine-modal-title').textContent = 'Yangi jarima';
+    }
+  }
+
+  // Close on backdrop click
+  document.querySelectorAll('.overlay').forEach(o => {
+    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+  });
+
+  // === DASHBOARD ===
+  async function loadDashboard() {
+    try {
+      const [drivers, cars, fines] = await Promise.all([
+        apiFetch('/drivers/'), apiFetch('/cars/'), apiFetch('/fines/')
+      ]);
+      allDrivers = drivers; allCars = cars; allFines = fines;
+
+      document.getElementById('stat-drivers').textContent = drivers.length;
+      document.getElementById('stat-cars').textContent = cars.length;
+      document.getElementById('stat-fines').textContent = fines.length;
+
+      // Driver list
+      const dEl = document.getElementById('dash-drivers-list');
+      if (!drivers.length) {
+        dEl.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">Haydovchilar yo\'q</div></div>';
+      } else {
+        dEl.innerHTML = drivers.slice(0, 5).map(d => `
+          <div class="driver-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="driver-avatar">${d.first_name[0]}${d.last_name[0]}</div>
+              <div>
+                <div style="font-weight:500">${d.first_name} ${d.last_name}</div>
+                <div style="font-size:12px;color:var(--muted)">${d.cars ? d.cars.length : 0} ta mashina</div>
+              </div>
+            </div>
+            <span class="badge badge-green">Aktiv</span>
+          </div>
+        `).join('');
+      }
+
+      // Fines list
+      const fEl = document.getElementById('dash-fines-list');
+      if (!fines.length) {
+        fEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Jarimalar yo\'q</div></div>';
+      } else {
+        fEl.innerHTML = fines.slice(0, 5).map(f => {
+          const car = cars.find(c => c.id === f.car);
+          return `
+            <div class="driver-row">
+              <div>
+                <div style="font-weight:500">${car ? car.brand : '—'}</div>
+                <div style="font-size:12px;color:var(--muted)">${f.date}</div>
+              </div>
+              <span style="font-family:'Syne',sans-serif;font-weight:600;color:var(--accent2)">${Number(f.amount).toLocaleString()} so'm</span>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch(e) {
+      toast('API ga ulanib bo\'lmadi: ' + e.message, 'error');
+      document.getElementById('api-status').textContent = 'API ulanmagan';
+    }
+  }
+
+  // === DRIVERS TABLE ===
+  async function loadDriversTable() {
+    const el = document.getElementById('drivers-table-body');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div> Yuklanmoqda...</div>';
+    try {
+      allDrivers = await apiFetch('/drivers/');
+      renderDriversTable(allDrivers);
+    } catch(e) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>${e.message}</div></div>`; }
+  }
+
+  function renderDriversTable(data) {
+    const el = document.getElementById('drivers-table-body');
+    if (!data.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">Haydovchilar mavjud emas</div></div>';
+      return;
+    }
+    el.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ism Familiya</th>
+            <th>Mashinalar</th>
+            <th>Jarimalar soni</th>
+            <th style="text-align:right">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(d => {
+            const carsCount = d.cars ? d.cars.length : 0;
+            const finesCount = d.cars ? d.cars.reduce((sum, c) => sum + (c.fines ? c.fines.length : 0), 0) : 0;
+            return `
+              <tr>
+                <td style="color:var(--muted);width:50px">${d.id}</td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div class="driver-avatar">${d.first_name[0]}${d.last_name[0]}</div>
+                    <span style="font-weight:500">${d.first_name} ${d.last_name}</span>
+                  </div>
+                </td>
+                <td><span class="badge badge-blue">${carsCount} ta</span></td>
+                <td><span class="badge ${finesCount > 0 ? 'badge-orange' : 'badge-green'}">${finesCount} ta</span></td>
+                <td class="td-actions">
+                  <button class="btn btn-ghost btn-sm" onclick="editDriver(${d.id})">✏️ Tahrir</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteDriver(${d.id})">🗑️</button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function filterDrivers() {
+    const q = document.getElementById('drivers-search').value.toLowerCase();
+    renderDriversTable(allDrivers.filter(d =>
+      `${d.first_name} ${d.last_name}`.toLowerCase().includes(q)
+    ));
+  }
+
+  async function saveDriver() {
+    const id = document.getElementById('driver-id').value;
+    const body = {
+      first_name: document.getElementById('driver-first').value.trim(),
+      last_name: document.getElementById('driver-last').value.trim()
+    };
+    if (!body.first_name || !body.last_name) return toast('Barcha maydonlarni to\'ldiring', 'error');
+    try {
+      if (id) {
+        await apiFetch(`/drivers/${id}/`, {method:'PUT', body: JSON.stringify(body)});
+        toast('Haydovchi yangilandi ✓');
+      } else {
+        await apiFetch('/drivers/', {method:'POST', body: JSON.stringify(body)});
+        toast('Yangi haydovchi qo\'shildi ✓');
+      }
+      closeModal('driver');
+      loadDriversTable();
+      loadDashboard();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function editDriver(id) {
+    const d = allDrivers.find(x => x.id === id);
+    if (!d) return;
+    document.getElementById('driver-id').value = d.id;
+    document.getElementById('driver-first').value = d.first_name;
+    document.getElementById('driver-last').value = d.last_name;
+    document.getElementById('driver-modal-title').textContent = 'Haydovchini tahrirlash';
+    openModal('driver');
+  }
+
+  async function deleteDriver(id) {
+    if (!confirm('Haydovchini o\'chirishni tasdiqlaysizmi?')) return;
+    try {
+      await apiFetch(`/drivers/${id}/`, {method:'DELETE'});
+      toast('Haydovchi o\'chirildi');
+      loadDriversTable();
+      loadDashboard();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // === CARS TABLE ===
+  async function loadCarsTable() {
+    const el = document.getElementById('cars-table-body');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      [allCars, allDrivers] = await Promise.all([apiFetch('/cars/'), apiFetch('/drivers/')]);
+      renderCarsTable(allCars);
+    } catch(e) { el.innerHTML = `<div class="empty-state">${e.message}</div>`; }
+  }
+
+  function renderCarsTable(data) {
+    const el = document.getElementById('cars-table-body');
+    if (!data.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🚗</div><div class="empty-text">Mashinalar mavjud emas</div></div>';
+      return;
+    }
+    el.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Brend</th>
+            <th>Davlat raqami</th>
+            <th>Haydovchi</th>
+            <th>Jarimalar</th>
+            <th style="text-align:right">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(c => {
+            const finesCount = c.fines ? c.fines.length : 0;
+            const driver = allDrivers.find(d => d.id === c.driver) || null;
+            return `
+              <tr>
+                <td style="color:var(--muted)">${c.id}</td>
+                <td style="font-weight:500">🚗 ${c.brand}</td>
+                <td><span style="font-family:monospace;background:var(--surface2);padding:3px 8px;border-radius:6px;font-size:13px">${c.license_plate}</span></td>
+                <td style="color:var(--muted)">${driver ? `${driver.first_name} ${driver.last_name}` : '—'}</td>
+                <td><span class="badge ${finesCount > 0 ? 'badge-orange' : 'badge-green'}">${finesCount} ta</span></td>
+                <td class="td-actions">
+                  <button class="btn btn-ghost btn-sm" onclick="editCar(${c.id})">✏️</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteCar(${c.id})">🗑️</button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function filterCars() {
+    const q = document.getElementById('cars-search').value.toLowerCase();
+    renderCarsTable(allCars.filter(c =>
+      c.brand.toLowerCase().includes(q) || c.license_plate.toLowerCase().includes(q)
+    ));
+  }
+
+  async function loadDriversForSelect() {
+    const sel = document.getElementById('car-driver');
+    const drivers = await apiFetch('/drivers/');
+    sel.innerHTML = '<option value="">Haydovchi tanlang...</option>' +
+      drivers.map(d => `<option value="${d.id}">${d.first_name} ${d.last_name}</option>`).join('');
+  }
+
+  async function saveCar() {
+    const id = document.getElementById('car-id').value;
+    const body = {
+      brand: document.getElementById('car-brand').value.trim(),
+      license_plate: document.getElementById('car-plate').value.trim(),
+      driver: parseInt(document.getElementById('car-driver').value)
+    };
+    if (!body.brand || !body.license_plate || !body.driver) return toast('Barcha maydonlarni to\'ldiring', 'error');
+    try {
+      if (id) {
+        await apiFetch(`/cars/${id}/`, {method:'PUT', body: JSON.stringify(body)});
+        toast('Mashina yangilandi ✓');
+      } else {
+        await apiFetch('/cars/', {method:'POST', body: JSON.stringify(body)});
+        toast('Mashina qo\'shildi ✓');
+      }
+      closeModal('car');
+      loadCarsTable();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function editCar(id) {
+    const c = allCars.find(x => x.id === id);
+    if (!c) return;
+    await loadDriversForSelect();
+    document.getElementById('car-id').value = c.id;
+    document.getElementById('car-brand').value = c.brand;
+    document.getElementById('car-plate').value = c.license_plate;
+    document.getElementById('car-driver').value = c.driver;
+    document.getElementById('car-modal-title').textContent = 'Mashinani tahrirlash';
+    openModal('car', false);
+  }
+
+  async function deleteCar(id) {
+    if (!confirm('Mashinani o\'chirishni tasdiqlaysizmi?')) return;
+    try {
+      await apiFetch(`/cars/${id}/`, {method:'DELETE'});
+      toast('Mashina o\'chirildi');
+      loadCarsTable();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // === FINES TABLE ===
+  async function loadFinesTable() {
+    const el = document.getElementById('fines-table-body');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      [allFines, allCars] = await Promise.all([apiFetch('/fines/'), apiFetch('/cars/')]);
+      renderFinesTable(allFines);
+    } catch(e) { el.innerHTML = `<div class="empty-state">${e.message}</div>`; }
+  }
+
+  function renderFinesTable(data) {
+    const el = document.getElementById('fines-table-body');
+    if (!data.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Jarimalar mavjud emas</div></div>';
+      return;
+    }
+    el.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Mashina</th>
+            <th>Sana</th>
+            <th>Miqdor</th>
+            <th style="text-align:right">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(f => {
+            const car = allCars.find(c => c.id === f.car);
+            return `
+              <tr>
+                <td style="color:var(--muted)">${f.id}</td>
+                <td style="font-weight:500">${car ? `🚗 ${car.brand} <span style="font-size:12px;color:var(--muted)">(${car.license_plate})</span>` : '—'}</td>
+                <td style="color:var(--muted)">${f.date}</td>
+                <td><span style="font-family:'Syne',sans-serif;font-weight:600;font-size:15px;color:var(--accent2)">${Number(f.amount).toLocaleString()} so'm</span></td>
+                <td class="td-actions">
+                  <button class="btn btn-ghost btn-sm" onclick="editFine(${f.id})">✏️</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteFine(${f.id})">🗑️</button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function filterFines() {
+    const q = document.getElementById('fines-search').value.toLowerCase();
+    renderFinesTable(allFines.filter(f =>
+      String(f.amount).includes(q) || f.date.includes(q)
+    ));
+  }
+
+  async function loadCarsForSelect() {
+    const sel = document.getElementById('fine-car');
+    const cars = await apiFetch('/cars/');
+    sel.innerHTML = '<option value="">Mashina tanlang...</option>' +
+      cars.map(c => `<option value="${c.id}">${c.brand} — ${c.license_plate}</option>`).join('');
+  }
+
+  async function saveFine() {
+    const id = document.getElementById('fine-id').value;
+    const body = {
+      car: parseInt(document.getElementById('fine-car').value),
+      amount: parseFloat(document.getElementById('fine-amount').value),
+      date: document.getElementById('fine-date').value
+    };
+    if (!body.car || !body.amount || !body.date) return toast('Barcha maydonlarni to\'ldiring', 'error');
+    try {
+      if (id) {
+        await apiFetch(`/fines/${id}/`, {method:'PUT', body: JSON.stringify(body)});
+        toast('Jarima yangilandi ✓');
+      } else {
+        await apiFetch('/fines/', {method:'POST', body: JSON.stringify(body)});
+        toast('Jarima qo\'shildi ✓');
+      }
+      closeModal('fine');
+      loadFinesTable();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function editFine(id) {
+    const f = allFines.find(x => x.id === id);
+    if (!f) return;
+    await loadCarsForSelect();
+    document.getElementById('fine-id').value = f.id;
+    document.getElementById('fine-car').value = f.car;
+    document.getElementById('fine-amount').value = f.amount;
+    document.getElementById('fine-date').value = f.date;
+    document.getElementById('fine-modal-title').textContent = 'Jarimani tahrirlash';
+    openModal('fine', false);
+  }
+
+  async function deleteFine(id) {
+    if (!confirm('Jarimani o\'chirishni tasdiqlaysizmi?')) return;
+    try {
+      await apiFetch(`/fines/${id}/`, {method:'DELETE'});
+      toast('Jarima o\'chirildi');
+      loadFinesTable();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // === INIT ===
+  loadDashboard();
+</script>
+</body>
+</html>
